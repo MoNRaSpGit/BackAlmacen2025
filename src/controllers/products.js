@@ -26,7 +26,7 @@ export async function listProducts(req, res) {
     const offset = (page - 1) * limit;
 
     const base = `
-      SELECT id, name, price, image, barcode, description
+      SELECT id, name, price, stock, image, barcode, description
       FROM products
     `;
 
@@ -48,6 +48,7 @@ export async function listProducts(req, res) {
       id: r.id,
       name: r.name,
       price: r.price,
+      stock: r.stock,
       barcode: r.barcode,
       description: r.description,
       image_url: ensureDataUri(r.image),
@@ -63,19 +64,17 @@ export async function listProducts(req, res) {
 export async function getProductByBarcode(req, res) {
   try {
     const { trimmed, digitsOnly } = sanitizeBarcode(req.params.code);
-    const soft = req.query.soft === '1'; // 👈 modo "silencioso"
+    const soft = req.query.soft === '1';
 
-    // 1) exacto
     let [rows] = await pool.query(
-      `SELECT id, name, price, image, barcode, description
+      `SELECT id, name, price, stock, image, barcode, description
        FROM products WHERE barcode = ? LIMIT 1`,
       [trimmed]
     );
 
-    // 2) solo dígitos (quita espacios/tabs/CR/LF)
     if (!rows.length) {
       [rows] = await pool.query(
-        `SELECT id, name, price, image, barcode, description
+        `SELECT id, name, price, stock, image, barcode, description
          FROM products
          WHERE REPLACE(REPLACE(REPLACE(REPLACE(barcode,' ', ''), '\r',''), '\n',''), '\t','') = ?
          LIMIT 1`,
@@ -83,9 +82,8 @@ export async function getProductByBarcode(req, res) {
       );
     }
 
-    // 3) si no hay resultados → 200 con {found:false} si soft=1; 404 si no
     if (!rows.length) {
-      if (soft) return res.json({ found: false });   // 200 "silencioso"
+      if (soft) return res.json({ found: false });
       return res.status(404).json({ error: 'Not found' });
     }
 
@@ -94,16 +92,16 @@ export async function getProductByBarcode(req, res) {
       id: r.id,
       name: r.name,
       price: r.price,
+      stock: r.stock,
       barcode: r.barcode,
       description: r.description,
-      image_url: ensureDataUri(r.image), // mantiene tu normalización
+      image_url: ensureDataUri(r.image),
     });
   } catch (err) {
     console.error('getProductByBarcode error:', err);
     return res.status(500).json({ error: 'Server error' });
   }
 }
-
 
 // GET /api/products/:id
 export async function getProductById(req, res) {
@@ -114,7 +112,7 @@ export async function getProductById(req, res) {
     }
 
     const [rows] = await pool.query(
-      `SELECT id, name, price, image, barcode, description
+      `SELECT id, name, price, stock, image, barcode, description
        FROM products WHERE id = ? LIMIT 1`,
       [id]
     );
@@ -125,6 +123,7 @@ export async function getProductById(req, res) {
       id: r.id,
       name: r.name,
       price: r.price,
+      stock: r.stock,
       barcode: r.barcode,
       description: r.description,
       image_url: ensureDataUri(r.image),
@@ -150,7 +149,7 @@ export async function updateProductImage(req, res) {
     if (!imageDataUrl.startsWith('data:') || !imageDataUrl.includes(';base64,')) {
       return res.status(400).json({ error: 'imageDataUrl debe ser data URI base64 (data:image/...;base64,...)' });
     }
-    if (imageDataUrl.length > 10_000_000) { // ~10MB
+    if (imageDataUrl.length > 10_000_000) {
       return res.status(413).json({ error: 'imagen demasiado grande (>10MB)' });
     }
 
@@ -162,12 +161,11 @@ export async function updateProductImage(req, res) {
   }
 }
 
-// POST /api/products  ← NUEVO: crear producto cuando no existe
+// POST /api/products
 export async function createProduct(req, res) {
   try {
-    const { name, price, barcode, description, imageDataUrl } = req.body || {};
+    const { name, price, stock, barcode, description, imageDataUrl } = req.body || {};
 
-    // Validaciones mínimas
     const cleanName = String(name ?? '').trim();
     const cleanBarcode = sanitizeBarcode(barcode).trimmed;
     if (!cleanName) return res.status(400).json({ error: 'name requerido' });
@@ -178,6 +176,13 @@ export async function createProduct(req, res) {
       const n = Number(price);
       if (!isFinite(n) || n < 0) return res.status(400).json({ error: 'price inválido' });
       cleanPrice = n;
+    }
+
+    let cleanStock = 10; // valor default
+    if (stock !== undefined && stock !== null && String(stock).trim() !== '') {
+      const n = Number(stock);
+      if (!Number.isInteger(n) || n < 0) return res.status(400).json({ error: 'stock inválido' });
+      cleanStock = n;
     }
 
     let cleanImage = null;
@@ -191,7 +196,6 @@ export async function createProduct(req, res) {
       cleanImage = imageDataUrl;
     }
 
-    // Unicidad por barcode
     const [exist] = await pool.query(
       `SELECT id FROM products WHERE barcode = ? LIMIT 1`,
       [cleanBarcode]
@@ -200,17 +204,15 @@ export async function createProduct(req, res) {
       return res.status(409).json({ error: 'Ya existe un producto con ese barcode' });
     }
 
-    // Insert
     const [result] = await pool.query(
-      `INSERT INTO products (name, price, image, barcode, description)
-       VALUES (?, ?, ?, ?, ?)`,
-      [cleanName, cleanPrice, cleanImage, cleanBarcode, description ?? null]
+      `INSERT INTO products (name, price, stock, image, barcode, description)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [cleanName, cleanPrice, cleanStock, cleanImage, cleanBarcode, description ?? null]
     );
 
-    // Devolver creado
     const newId = result.insertId;
     const [rows] = await pool.query(
-      `SELECT id, name, price, image, barcode, description
+      `SELECT id, name, price, stock, image, barcode, description
        FROM products WHERE id = ? LIMIT 1`,
       [newId]
     );
@@ -219,6 +221,7 @@ export async function createProduct(req, res) {
       id: r.id,
       name: r.name,
       price: r.price,
+      stock: r.stock,
       barcode: r.barcode,
       description: r.description,
       image_url: ensureDataUri(r.image),
