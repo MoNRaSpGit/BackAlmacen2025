@@ -4,6 +4,7 @@ import cors from 'cors';
 
 // Rutas
 import productsRouter from './routes/products.js';
+import usersRouter from './routes/users.js';
 
 const app = express();
 
@@ -17,6 +18,7 @@ app.use(cors({ origin: ORIGINS }));
 // Aceptar JSON “grande” (imagenes base64)
 app.use(express.json({ limit: '6mb' }));
 app.use(express.urlencoded({ extended: true, limit: '6mb' }));
+app.use('/api/users', usersRouter);
 
 // Healthcheck para Render
 app.get('/api/health', (_req, res) => res.json(true));
