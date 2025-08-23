@@ -66,13 +66,21 @@ export async function getProductByBarcode(req, res) {
     const { trimmed, digitsOnly } = sanitizeBarcode(req.params.code);
     const soft = req.query.soft === '1';
 
+    // 🚨 Validación: si no hay código válido, devolvemos "no encontrado"
+    if (!trimmed) {
+      if (soft) return res.json({ found: false });
+      return res.status(404).json({ error: "Not found" });
+    }
+
+    // 1) búsqueda exacta
     let [rows] = await pool.query(
       `SELECT id, name, price, stock, image, barcode, description
        FROM products WHERE barcode = ? LIMIT 1`,
       [trimmed]
     );
 
-    if (!rows.length) {
+    // 2) búsqueda por solo dígitos (si hay)
+    if (!rows.length && digitsOnly) {
       [rows] = await pool.query(
         `SELECT id, name, price, stock, image, barcode, description
          FROM products
@@ -82,11 +90,13 @@ export async function getProductByBarcode(req, res) {
       );
     }
 
+    // 3) si sigue sin resultados → respondemos acorde
     if (!rows.length) {
-      if (soft) return res.json({ found: false });
+      if (soft) return res.json({ found: false }); // silencioso
       return res.status(404).json({ error: 'Not found' });
     }
 
+    // ✅ encontrado
     const r = rows[0];
     return res.json({
       id: r.id,
@@ -102,6 +112,7 @@ export async function getProductByBarcode(req, res) {
     return res.status(500).json({ error: 'Server error' });
   }
 }
+
 
 // GET /api/products/:id
 export async function getProductById(req, res) {
