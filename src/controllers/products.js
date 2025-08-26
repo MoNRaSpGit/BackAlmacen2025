@@ -25,26 +25,32 @@ export async function listProducts(req, res) {
     const page = Math.max(parseInt(req.query.page || '1', 10), 1);
     const offset = (page - 1) * limit;
 
-    const base = `
-      SELECT id, name, price, stock, image, barcode, description
-      FROM products
-    `;
+    let where = "";
+    let params = [];
 
-    let sql, params;
     if (q) {
       const like = `%${q}%`;
-      sql = `${base}
-             WHERE name LIKE ? OR barcode LIKE ?
-             ORDER BY name ASC
-             LIMIT ? OFFSET ?`;
-      params = [like, like, limit, offset];
-    } else {
-      sql = `${base} ORDER BY name ASC LIMIT ? OFFSET ?`;
-      params = [limit, offset];
+      where = "WHERE name LIKE ? OR barcode LIKE ?";
+      params = [like, like];
     }
 
-    const [rows] = await pool.query(sql, params);
-    const out = rows.map(r => ({
+    // 👇 1) total de productos
+    const [[{ total }]] = await pool.query(
+      `SELECT COUNT(*) as total FROM products ${where}`,
+      params
+    );
+
+    // 👇 2) productos de la página actual
+    const [rows] = await pool.query(
+      `SELECT id, name, price, stock, image, barcode, description
+       FROM products
+       ${where}
+       ORDER BY name ASC
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
+
+    const items = rows.map(r => ({
       id: r.id,
       name: r.name,
       price: r.price,
@@ -53,65 +59,81 @@ export async function listProducts(req, res) {
       description: r.description,
       image_url: ensureDataUri(r.image),
     }));
-    res.json(out);
+
+    // 👇 devolvemos tanto el total como la página actual
+    res.json({ total, items });
   } catch (err) {
     console.error('listProducts error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 }
 
+
 // GET /api/products/by-barcode/:code?soft=1
 export async function getProductByBarcode(req, res) {
   try {
-    const { trimmed, digitsOnly } = sanitizeBarcode(req.params.code);
-    const soft = req.query.soft === '1';
+    const { trimmed, digitsOnly } = sanitizeBarcode(req.params.code || "");
+    const soft = req.query.soft === "1";
 
-    // 🚨 Validación: si no hay código válido, devolvemos "no encontrado"
+    // 🚨 Validación inicial
     if (!trimmed) {
       if (soft) return res.json({ found: false });
       return res.status(404).json({ error: "Not found" });
     }
 
-    // 1) búsqueda exacta
-    let [rows] = await pool.query(
-      `SELECT id, name, price, stock, image, barcode, description
-       FROM products WHERE barcode = ? LIMIT 1`,
-      [trimmed]
-    );
+    let rows = [];
 
-    // 2) búsqueda por solo dígitos (si hay)
-    if (!rows.length && digitsOnly) {
+    // 1) búsqueda exacta
+    try {
       [rows] = await pool.query(
         `SELECT id, name, price, stock, image, barcode, description
-         FROM products
-         WHERE REPLACE(REPLACE(REPLACE(REPLACE(barcode,' ', ''), '\r',''), '\n',''), '\t','') = ?
-         LIMIT 1`,
-        [digitsOnly]
+         FROM products WHERE barcode = ? LIMIT 1`,
+        [trimmed]
       );
+    } catch (dbErr) {
+      console.error("❌ DB error (exact):", dbErr);
+      throw dbErr;
     }
 
-    // 3) si sigue sin resultados → respondemos acorde
+    // 2) búsqueda por solo dígitos
+    if (!rows.length && digitsOnly) {
+      try {
+        [rows] = await pool.query(
+          `SELECT id, name, price, stock, image, barcode, description
+           FROM products
+           WHERE REPLACE(REPLACE(REPLACE(REPLACE(barcode,' ', ''), '\r',''), '\n',''), '\t','') = ?
+           LIMIT 1`,
+          [digitsOnly]
+        );
+      } catch (dbErr) {
+        console.error("❌ DB error (digitsOnly):", dbErr);
+        throw dbErr;
+      }
+    }
+
+    // 3) si sigue vacío
     if (!rows.length) {
-      if (soft) return res.json({ found: false }); // silencioso
-      return res.status(404).json({ error: 'Not found' });
+      if (soft) return res.json({ found: false });
+      return res.status(404).json({ error: "Not found" });
     }
 
-    // ✅ encontrado
+    // ✅ sanitizar resultado
     const r = rows[0];
     return res.json({
       id: r.id,
       name: r.name,
-      price: r.price,
-      stock: r.stock,
-      barcode: r.barcode,
-      description: r.description,
+      price: Number(r.price) ?? 0,
+      stock: Number(r.stock) ?? 0,
+      barcode: r.barcode || trimmed,
+      description: r.description || "",
       image_url: ensureDataUri(r.image),
     });
   } catch (err) {
-    console.error('getProductByBarcode error:', err);
-    return res.status(500).json({ error: 'Server error' });
+    console.error("❌ getProductByBarcode error:", err);
+    return res.status(500).json({ error: "Server error", details: err.message });
   }
 }
+
 
 
 // GET /api/products/:id
