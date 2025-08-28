@@ -21,7 +21,8 @@ function sanitizeBarcode(code = '') {
 export async function listProducts(req, res) {
   try {
     const q = (req.query.q || '').trim();
-    const limit = Math.min(parseInt(req.query.limit || '60', 10), 200);
+    //const limit = Math.min(parseInt(req.query.limit || '60', 10), 200);
+    const limit = parseInt(req.query.limit || '60', 10);
     const page = Math.max(parseInt(req.query.page || '1', 10), 1);
     const offset = (page - 1) * limit;
 
