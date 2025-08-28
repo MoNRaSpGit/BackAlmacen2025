@@ -168,31 +168,92 @@ export async function getProductById(req, res) {
 }
 
 // PUT /api/products/:id/image  (responde 204)
-export async function updateProductImage(req, res) {
+// PUT /api/products/:id  → actualiza nombre, precio e imagen
+export async function updateProduct(req, res) {
   try {
     const id = Number(req.params.id);
-    const imageDataUrl = String(req.body?.imageDataUrl || '');
-
     if (!Number.isInteger(id) || id <= 0) {
-      return res.status(400).json({ error: 'id inválido' });
-    }
-    if (!imageDataUrl) {
-      return res.status(400).json({ error: 'imageDataUrl requerido' });
-    }
-    if (!imageDataUrl.startsWith('data:') || !imageDataUrl.includes(';base64,')) {
-      return res.status(400).json({ error: 'imageDataUrl debe ser data URI base64 (data:image/...;base64,...)' });
-    }
-    if (imageDataUrl.length > 10_000_000) {
-      return res.status(413).json({ error: 'imagen demasiado grande (>10MB)' });
+      return res.status(400).json({ error: "id inválido" });
     }
 
-    await pool.query(`UPDATE products SET image = ? WHERE id = ?`, [imageDataUrl, id]);
-    return res.status(204).end();
+    const { name, price, imageDataUrl } = req.body || {};
+
+    // 🔹 Preparamos los sets dinámicamente
+    const updates = [];
+    const params = [];
+
+    if (name !== undefined) {
+      updates.push("name = ?");
+      params.push(String(name).trim());
+    }
+
+    if (price !== undefined) {
+      const n = Number(price);
+      if (!isFinite(n) || n < 0) {
+        return res.status(400).json({ error: "price inválido" });
+      }
+      updates.push("price = ?");
+      params.push(n);
+    }
+
+    if (imageDataUrl !== undefined) {
+      if (imageDataUrl) {
+        if (
+          !imageDataUrl.startsWith("data:") ||
+          !imageDataUrl.includes(";base64,")
+        ) {
+          return res.status(400).json({
+            error:
+              "imageDataUrl debe ser data URI base64 (data:image/...;base64,...)",
+          });
+        }
+        if (imageDataUrl.length > 10_000_000) {
+          return res
+            .status(413)
+            .json({ error: "imagen demasiado grande (>10MB)" });
+        }
+        updates.push("image = ?");
+        params.push(imageDataUrl);
+      } else {
+        updates.push("image = NULL");
+      }
+    }
+
+    if (!updates.length) {
+      return res
+        .status(400)
+        .json({ error: "No se enviaron campos para actualizar" });
+    }
+
+    params.push(id);
+
+    await pool.query(`UPDATE products SET ${updates.join(", ")} WHERE id = ?`, params);
+
+    // 🔹 devolvemos el producto actualizado
+    const [rows] = await pool.query(
+      `SELECT id, name, price, stock, image, barcode, description
+       FROM products WHERE id = ? LIMIT 1`,
+      [id]
+    );
+
+    if (!rows.length) return res.status(404).json({ error: "Not found" });
+
+    const r = rows[0];
+    return res.json({
+      id: r.id,
+      name: r.name,
+      price: r.price,
+      stock: r.stock,
+      barcode: r.barcode,
+      description: r.description,
+      image_url: ensureDataUri(r.image),
+    });
   } catch (err) {
-    console.error('updateProductImage error:', err);
-    return res.status(500).json({ error: 'Server error' });
+    console.error("updateProduct error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
 }
+
 
 // POST /api/products
 export async function createProduct(req, res) {

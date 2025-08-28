@@ -1,18 +1,20 @@
-import { Router } from 'express';
+import express from "express";
 import {
   listProducts,
   getProductByBarcode,
   getProductById,
   updateProductImage,
-  createProduct,          // ⬅️ nuevo
-} from '../controllers/products.js';
+  createProduct,
+  updateProduct,   // 👈 agregar este
+} from "../controllers/products.js";
 
-const r = Router();
+const router = express.Router();
 
-r.get('/', listProducts);
-r.get('/by-barcode/:code', getProductByBarcode);
-r.get('/:id', getProductById);
-r.put('/:id/image', updateProductImage);
-r.post('/', createProduct);                // ⬅️ NUEVO
+router.get("/", listProducts);
+router.get("/by-barcode/:code", getProductByBarcode);
+router.get("/:id", getProductById);
+router.put("/:id/image", updateProductImage);
+router.post("/", createProduct);
+router.put("/:id", updateProduct);  // 👈 acá
 
-export default r;
+export default router;
