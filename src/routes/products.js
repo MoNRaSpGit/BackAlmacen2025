@@ -1,20 +1,24 @@
-import express from "express";
+import { Router } from "express";
 import {
   listProducts,
   getProductByBarcode,
   getProductById,
-  updateProductImage,
   createProduct,
-  updateProduct,   // 👈 agregar este
+  updateProduct, // 👈 nuevo
+  // updateProductImage, // 👈 si ya no lo usás, lo sacamos
 } from "../controllers/products.js";
 
-const router = express.Router();
+const r = Router();
 
-router.get("/", listProducts);
-router.get("/by-barcode/:code", getProductByBarcode);
-router.get("/:id", getProductById);
-router.put("/:id/image", updateProductImage);
-router.post("/", createProduct);
-router.put("/:id", updateProduct);  // 👈 acá
+r.get("/", listProducts);
+r.get("/by-barcode/:code", getProductByBarcode);
+r.get("/:id", getProductById);
+r.post("/", createProduct);
 
-export default router;
+// Ruta general para editar nombre, precio, imagen
+r.put("/:id", updateProduct);
+
+// Si todavía querés mantener el endpoint viejo SOLO de imagen, lo dejás:
+/// r.put("/:id/image", updateProductImage);
+
+export default r;
