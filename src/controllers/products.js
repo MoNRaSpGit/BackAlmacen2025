@@ -257,14 +257,19 @@ export async function updateProduct(req, res) {
 
 
 // POST /api/products
+// POST /api/products
 export async function createProduct(req, res) {
   try {
     const { name, price, stock, barcode, description, imageDataUrl } = req.body || {};
 
     const cleanName = String(name ?? '').trim();
-    const cleanBarcode = sanitizeBarcode(barcode).trimmed;
     if (!cleanName) return res.status(400).json({ error: 'name requerido' });
-    if (!cleanBarcode) return res.status(400).json({ error: 'barcode requerido' });
+
+    // ⚡ barcode ahora puede ser null
+    let cleanBarcode = null;
+    if (barcode && String(barcode).trim() !== '') {
+      cleanBarcode = sanitizeBarcode(barcode).trimmed;
+    }
 
     let cleanPrice = null;
     if (price !== undefined && price !== null && String(price).trim() !== '') {
@@ -291,12 +296,15 @@ export async function createProduct(req, res) {
       cleanImage = imageDataUrl;
     }
 
-    const [exist] = await pool.query(
-      `SELECT id FROM products WHERE barcode = ? LIMIT 1`,
-      [cleanBarcode]
-    );
-    if (exist.length) {
-      return res.status(409).json({ error: 'Ya existe un producto con ese barcode' });
+    // ⚡ solo check duplicado si realmente vino un barcode
+    if (cleanBarcode) {
+      const [exist] = await pool.query(
+        `SELECT id FROM products WHERE barcode = ? LIMIT 1`,
+        [cleanBarcode]
+      );
+      if (exist.length) {
+        return res.status(409).json({ error: 'Ya existe un producto con ese barcode' });
+      }
     }
 
     const [result] = await pool.query(
@@ -326,3 +334,4 @@ export async function createProduct(req, res) {
     return res.status(500).json({ error: 'Server error' });
   }
 }
+
