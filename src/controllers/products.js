@@ -362,5 +362,51 @@ export async function listUnupdatedProducts(req, res) {
   }
 }
 
+// DELETE /api/products/:id
+export async function deleteProduct(req, res) {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: "id inválido" });
+    }
+
+    const [result] = await pool.query(`DELETE FROM products WHERE id = ?`, [id]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Producto no encontrado" });
+    }
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("deleteProduct error:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+}
+
+// PUT /api/products/:id/barcode
+export async function updateProductBarcode(req, res) {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: "id inválido" });
+    }
+
+    const { barcode } = req.body || {};
+    if (!barcode || !String(barcode).trim()) {
+      return res.status(400).json({ error: "barcode requerido" });
+    }
+
+    const cleanBarcode = sanitizeBarcode(barcode).trimmed;
+
+    await pool.query(`UPDATE products SET barcode = ? WHERE id = ?`, [cleanBarcode, id]);
+
+    return res.json({ success: true, id, barcode: cleanBarcode });
+  } catch (err) {
+    console.error("updateProductBarcode error:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+}
+
+
 
 

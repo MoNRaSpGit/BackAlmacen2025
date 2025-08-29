@@ -5,11 +5,15 @@ import {
   getProductById,
   createProduct,
   updateProduct,           // 👈 actualizar producto completo
-  listUnupdatedProducts    // 👈 ahora sí lo importamos
+  listUnupdatedProducts,    // 👈 ahora sí lo importamos
+  deleteProduct, 
+  updateProductBarcode
   // updateProductImage,    // 👈 si ya no lo usás, lo sacás
 } from "../controllers/products.js";
 
 const r = Router();
+
+
 
 // Listado general
 r.get("/", listProducts);
@@ -26,5 +30,8 @@ r.put("/:id", updateProduct);
 
 // Si querés mantener el endpoint solo para imagen:
 // r.put("/:id/image", updateProductImage);
+
+r.delete("/:id", deleteProduct);
+r.put("/:id/barcode", updateProductBarcode);
 
 export default r;
