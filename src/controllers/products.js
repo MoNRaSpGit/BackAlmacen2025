@@ -336,13 +336,13 @@ export async function createProduct(req, res) {
 }
 
 // GET /api/products/unupdated
+// GET /api/products/unupdated
 export async function listUnupdatedProducts(req, res) {
   try {
     const [rows] = await pool.query(
       `SELECT id, name, price, stock, image, barcode, description
        FROM products
-       WHERE (barcode IS NULL OR barcode = '')
-         AND (image IS NULL OR image = '')`
+       WHERE (barcode IS NULL OR barcode = '')`
     );
 
     const items = rows.map(r => ({
@@ -361,6 +361,7 @@ export async function listUnupdatedProducts(req, res) {
     res.status(500).json({ error: "Server error" });
   }
 }
+
 
 // DELETE /api/products/:id
 export async function deleteProduct(req, res) {
