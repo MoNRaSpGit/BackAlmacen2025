@@ -335,3 +335,32 @@ export async function createProduct(req, res) {
   }
 }
 
+// GET /api/products/unupdated
+export async function listUnupdatedProducts(req, res) {
+  try {
+    const [rows] = await pool.query(
+      `SELECT id, name, price, stock, barcode, description, image
+       FROM products
+       WHERE (barcode IS NULL OR barcode = '')
+         AND (image IS NULL OR image = '')
+       ORDER BY name ASC`
+    );
+
+    const items = rows.map(r => ({
+      id: r.id,
+      name: r.name,
+      price: r.price,
+      stock: r.stock,
+      barcode: r.barcode,
+      description: r.description,
+      image_url: ensureDataUri(r.image),
+    }));
+
+    res.json({ total: items.length, items });
+  } catch (err) {
+    console.error("listUnupdatedProducts error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+}
+
+

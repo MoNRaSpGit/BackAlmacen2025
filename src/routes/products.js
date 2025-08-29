@@ -14,6 +14,8 @@ r.get("/", listProducts);
 r.get("/by-barcode/:code", getProductByBarcode);
 r.get("/:id", getProductById);
 r.post("/", createProduct);
+r.get('/unupdated', listUnupdatedProducts);
+
 
 // Ruta general para editar nombre, precio, imagen
 r.put("/:id", updateProduct);
