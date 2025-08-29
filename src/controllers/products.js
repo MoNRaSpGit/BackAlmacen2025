@@ -339,11 +339,10 @@ export async function createProduct(req, res) {
 export async function listUnupdatedProducts(req, res) {
   try {
     const [rows] = await pool.query(
-      `SELECT id, name, price, stock, barcode, description, image
+      `SELECT id, name, price, stock, image, barcode, description
        FROM products
        WHERE (barcode IS NULL OR barcode = '')
-         AND (image IS NULL OR image = '')
-       ORDER BY name ASC`
+         AND (image IS NULL OR image = '')`
     );
 
     const items = rows.map(r => ({
@@ -362,5 +361,6 @@ export async function listUnupdatedProducts(req, res) {
     res.status(500).json({ error: "Server error" });
   }
 }
+
 
 
