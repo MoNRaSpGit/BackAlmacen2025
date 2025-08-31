@@ -5,6 +5,7 @@ import {
   getProductById,
 } from "../controllers/productosActualizados.js";
 
+
 const r = Router();
 
 r.get("/", listProducts);
