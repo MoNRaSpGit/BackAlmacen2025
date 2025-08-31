@@ -5,6 +5,7 @@ import cors from 'cors';
 // Rutas
 import productsRouter from './routes/products.js';
 import usersRouter from './routes/users.js';
+import productosActualizadosRouter from './routes/productosActualizados.js'; // 👈 NUEVO
 
 const app = express();
 
@@ -28,6 +29,9 @@ app.use(express.urlencoded({ extended: true, limit: '6mb' }));
 // Rutas
 app.use('/api/users', usersRouter);
 app.use('/api/products', productsRouter);
+
+// 🔹 NUEVA RUTA productos-actualizados
+app.use('/api/productos-actualizados', productosActualizadosRouter);
 
 // Healthcheck para Render
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
