@@ -3,7 +3,7 @@ import {
   listProducts,
   getProductByBarcode,
   getProductById,
-} from "../controllers/productosActualizados.js";
+} from "../controllers/productosActualizados";
 
 const r = Router();
 
