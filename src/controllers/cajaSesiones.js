@@ -67,6 +67,44 @@ export async function addMovimiento(req, res) {
   }
 }
 
+// GET /api/caja/actual
+export async function getCajaActual(req, res) {
+  try {
+    const [rows] = await pool.query(
+      `SELECT * FROM caja_sesiones WHERE fecha_cierre IS NULL LIMIT 1`
+    );
+    if (!rows.length) {
+      return res.json(null); // no hay caja abierta
+    }
+    const sesion = rows[0];
+
+    const [[{ ventas }]] = await pool.query(
+      `SELECT IFNULL(SUM(monto),0) as ventas
+       FROM caja_movimientos WHERE sesion_id = ? AND tipo='venta'`,
+      [sesion.id]
+    );
+
+    const [[{ egresos }]] = await pool.query(
+      `SELECT IFNULL(SUM(monto),0) as egresos
+       FROM caja_movimientos WHERE sesion_id = ? AND tipo IN ('pago','egreso')`,
+      [sesion.id]
+    );
+
+    const actual = sesion.monto_inicial + ventas - egresos;
+
+    res.json({
+      ...sesion,
+      ventas,
+      egresos,
+      total_actual: actual
+    });
+  } catch (err) {
+    console.error("getCajaActual error:", err);
+    res.status(500).json({ error: "Error al obtener caja actual" });
+  }
+}
+
+
 // Cerrar caja
 export async function cerrarCaja(req, res) {
   try {

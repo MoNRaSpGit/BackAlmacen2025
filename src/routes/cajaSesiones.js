@@ -4,6 +4,7 @@ import {
   addMovimiento,
   cerrarCaja,
   listSesiones,
+  getCajaActual
 } from "../controllers/cajaSesiones.js";
 
 const r = Router();
@@ -12,5 +13,7 @@ r.post("/abrir", abrirCaja);
 r.post("/movimiento", addMovimiento);
 r.post("/cerrar", cerrarCaja);
 r.get("/historial", listSesiones);
+r.get("/actual", getCajaActual);
+
 
 export default r;
