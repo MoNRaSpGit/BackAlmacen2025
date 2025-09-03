@@ -335,8 +335,7 @@ export async function createProduct(req, res) {
   }
 }
 
-// GET /api/products/unupdated
-// GET /api/products/unupdated
+
 // GET /api/products/unupdated
 export async function listUnupdatedProducts(req, res) {
   try {
@@ -344,8 +343,9 @@ export async function listUnupdatedProducts(req, res) {
       `SELECT id, name, price, stock, image, barcode, description
        FROM products
        WHERE 
-         (barcode IS NULL OR barcode = '') 
-         OR (price = 999)
+         price = 999
+         AND (image IS NULL OR image = '')
+         AND (barcode IS NOT NULL AND barcode <> '')
        ORDER BY name ASC`
     );
 
@@ -365,7 +365,7 @@ export async function listUnupdatedProducts(req, res) {
     res.status(500).json({ error: "Server error" });
   }
 }
-2
+
 
 
 // DELETE /api/products/:id
