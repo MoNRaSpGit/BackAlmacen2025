@@ -25,7 +25,11 @@ export async function listProducts(req, res) {
     const page = Math.max(parseInt(req.query.page || '1', 10), 1);
     const offset = (page - 1) * limit;
 
-    let where = "WHERE p.id NOT IN (SELECT producto_id FROM productos_proveedores)";
+    let where = `
+      WHERE p.id NOT IN (SELECT producto_id FROM productos_proveedores)
+      AND p.barcode IS NOT NULL 
+      AND p.barcode <> ''
+    `;
     let params = [];
 
     if (q) {
@@ -65,6 +69,7 @@ export async function listProducts(req, res) {
     res.status(500).json({ error: 'Server error' });
   }
 }
+
 
 
 // GET /api/products/by-barcode/:code?soft=1
