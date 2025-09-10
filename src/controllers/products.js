@@ -17,36 +17,34 @@ function sanitizeBarcode(code = '') {
   return { trimmed, digitsOnly };
 }
 
-// GET /api/products?q=cola&limit=60&page=1
+// server/src/controllers/products.js
 export async function listProducts(req, res) {
   try {
     const q = (req.query.q || '').trim();
-    //const limit = Math.min(parseInt(req.query.limit || '60', 10), 200);
     const limit = parseInt(req.query.limit || '60', 10);
     const page = Math.max(parseInt(req.query.page || '1', 10), 1);
     const offset = (page - 1) * limit;
 
-    let where = "";
+    let where = "WHERE p.id NOT IN (SELECT producto_id FROM productos_proveedores)";
     let params = [];
 
     if (q) {
       const like = `%${q}%`;
-      where = "WHERE name LIKE ? OR barcode LIKE ?";
+      where += " AND (p.name LIKE ? OR p.barcode LIKE ?)";
       params = [like, like];
     }
 
-    // 👇 1) total de productos
+    // total
     const [[{ total }]] = await pool.query(
-      `SELECT COUNT(*) as total FROM products ${where}`,
-      params
+      `SELECT COUNT(*) as total FROM products p ${where}`, params
     );
 
-    // 👇 2) productos de la página actual
+    // productos
     const [rows] = await pool.query(
-      `SELECT id, name, price, stock, image, barcode, description
-       FROM products
+      `SELECT p.id, p.name, p.price, p.stock, p.image, p.barcode, p.description
+       FROM products p
        ${where}
-       ORDER BY name ASC
+       ORDER BY p.name ASC
        LIMIT ? OFFSET ?`,
       [...params, limit, offset]
     );
@@ -61,7 +59,6 @@ export async function listProducts(req, res) {
       image_url: ensureDataUri(r.image),
     }));
 
-    // 👇 devolvemos tanto el total como la página actual
     res.json({ total, items });
   } catch (err) {
     console.error('listProducts error:', err);
