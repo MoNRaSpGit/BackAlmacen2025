@@ -82,7 +82,7 @@ export async function listProductosDeProveedor(req, res) {
   }
 }
 
-import { pool } from "../config/db.js";
+
 
 // PUT /api/proveedores/:proveedorId/productos/:productoId
 export async function updateProductoDeProveedor(req, res) {
