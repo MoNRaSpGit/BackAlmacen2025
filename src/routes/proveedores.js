@@ -4,6 +4,7 @@ import {
   asignarProveedor,
   listProductosDeProveedor,
   updateProductoDeProveedor,
+  listProductosSinProveedor,
 } from "../controllers/proveedores.js";
 
 const router = Router();
