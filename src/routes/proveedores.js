@@ -1,10 +1,11 @@
+// src/routes/proveedores.js
 import { Router } from "express";
 import {
   listProveedores,
   asignarProveedor,
   listProductosDeProveedor,
   updateProductoDeProveedor,
-  listProductosSinProveedor ,
+  listProductosSinProveedor,
   listTodosProductos,
 } from "../controllers/proveedores.js";
 
@@ -16,15 +17,17 @@ router.get("/", listProveedores);
 // ✅ asignar productos a un proveedor
 router.post("/productos/asignar", asignarProveedor);
 
-// ✅ productos de un proveedor
+// ⚡ Poner rutas específicas primero
+// ✅ productos sin proveedor
+router.get("/productos/sin-proveedor", listProductosSinProveedor);
+
+// ✅ todos los productos (sin importar proveedor)
+router.get("/todos/productos", listTodosProductos);
+
+// ✅ productos de un proveedor puntual
 router.get("/:id/productos", listProductosDeProveedor);
 
 // ✅ actualizar producto de un proveedor
 router.put("/:proveedorId/productos/:productoId", updateProductoDeProveedor);
-
-router.get("/productos/sin-proveedor", listProductosSinProveedor);
-
-router.get("/todos/productos", listTodosProductos);
-                                    
 
 export default router;
