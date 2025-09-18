@@ -82,7 +82,7 @@ export async function listProductosDeProveedor(req, res) {
   }
 }
 
-// ✅ PUT /api/proveedores/:proveedorId/productos/:productoId
+// PUT /api/proveedores/:proveedorId/productos/:productoId
 export async function updateProductoDeProveedor(req, res) {
   try {
     const proveedorId = Number(req.params.proveedorId);
@@ -94,7 +94,7 @@ export async function updateProductoDeProveedor(req, res) {
 
     const { price, imageDataUrl } = req.body || {};
 
-    // 🔹 Actualizar precio en tabla products
+    // 🔹 Actualizar precio si viene
     if (price !== undefined) {
       const n = Number(price);
       if (!isFinite(n) || n < 0) {
@@ -103,9 +103,13 @@ export async function updateProductoDeProveedor(req, res) {
       await pool.query(`UPDATE products SET price = ? WHERE id = ?`, [n, productoId]);
     }
 
-    // 🔹 Actualizar imagen
+    // 🔹 Manejo de imagen
     if (imageDataUrl !== undefined) {
-      if (imageDataUrl) {
+      if (imageDataUrl === null || imageDataUrl === "") {
+        // Caso 3 → eliminar imagen
+        await pool.query(`UPDATE products SET image = NULL WHERE id = ?`, [productoId]);
+      } else {
+        // Caso 2 → validar y guardar nueva imagen
         if (
           !imageDataUrl.startsWith("data:") ||
           !imageDataUrl.includes(";base64,")
@@ -118,11 +122,9 @@ export async function updateProductoDeProveedor(req, res) {
           return res.status(413).json({ error: "imagen demasiado grande (>10MB)" });
         }
         await pool.query(`UPDATE products SET image = ? WHERE id = ?`, [imageDataUrl, productoId]);
-      } else {
-        await pool.query(`UPDATE products SET image = NULL WHERE id = ?`, [productoId]);
       }
     }
-
+    
     // 🔹 Devolver producto actualizado
     const [rows] = await pool.query(
       `SELECT p.id, p.name, p.barcode, p.price, p.stock, 
@@ -145,10 +147,11 @@ export async function updateProductoDeProveedor(req, res) {
       stock: r.stock,
       description: r.description,
       costo: r.costo,
-      image_url: ensureDataUri(r.image),
+      image_url: r.image ? r.image : null,
     });
   } catch (err) {
     console.error("updateProductoDeProveedor error:", err);
     res.status(500).json({ error: "Server error" });
   }
 }
+
