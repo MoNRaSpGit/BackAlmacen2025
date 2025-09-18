@@ -51,7 +51,7 @@ export async function listProducts(req, res) {
       stock: r.stock,
       barcode: r.barcode,
       description: r.description,
-      image_url: ensureDataUri(r.image),
+      image_url: ensureDataUri(r.image),      
     }));
 
     res.json({ total, items });

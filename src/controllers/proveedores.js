@@ -152,3 +152,66 @@ export async function updateProductoDeProveedor(req, res) {
     res.status(500).json({ error: "Server error" });
   }
 }
+
+
+// PUT /api/proveedores/:proveedorId/productos/:productoId
+export async function updateProductoDeProveedor(req, res) {
+  try {
+    const proveedorId = Number(req.params.proveedorId);
+    const productoId = Number(req.params.productoId);
+
+    const { price, imageDataUrl } = req.body || {};
+
+    // ⚡ Actualizar solo los campos enviados, no sobreescribir con null
+    if (price !== undefined) {
+      const n = Number(price);
+      if (!isFinite(n) || n < 0) {
+        return res.status(400).json({ error: "price inválido" });
+      }
+      await pool.query(`UPDATE products SET price = ? WHERE id = ?`, [n, productoId]);
+    }
+
+    if (imageDataUrl !== undefined) {
+      if (imageDataUrl) {
+        if (
+          !imageDataUrl.startsWith("data:") ||
+          !imageDataUrl.includes(";base64,")
+        ) {
+          return res.status(400).json({ error: "Formato de imagen inválido" });
+        }
+        if (imageDataUrl.length > 10_000_000) {
+          return res.status(413).json({ error: "Imagen demasiado grande (>10MB)" });
+        }
+        await pool.query(`UPDATE products SET image = ? WHERE id = ?`, [imageDataUrl, productoId]);
+      }
+      // 👇 si imageDataUrl === null → no tocamos nada
+    }
+
+    // Devolvemos el producto actualizado
+    const [rows] = await pool.query(
+      `SELECT p.id, p.name, p.barcode, p.price, p.stock, 
+              p.image, p.description, pp.costo
+       FROM productos_proveedores pp
+       JOIN products p ON p.id = pp.producto_id
+       WHERE pp.proveedor_id = ? AND p.id = ?
+       LIMIT 1`,
+      [proveedorId, productoId]
+    );
+
+    const r = rows[0];
+    res.json({
+      id: r.id,
+      name: r.name,
+      barcode: r.barcode,
+      price: r.price,
+      stock: r.stock,
+      description: r.description,
+      costo: r.costo,
+      image_url: r.image ? r.image : null,
+    });
+  } catch (err) {
+    console.error("updateProductoDeProveedor error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+}
+
