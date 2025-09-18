@@ -139,15 +139,16 @@ export async function updateProductoDeProveedor(req, res) {
 }
 
 
-// GET /api/productos/sin-proveedor
+// ✅ GET /api/productos/sin-proveedor
 export async function listProductosSinProveedor(req, res) {
   try {
     const [rows] = await pool.query(
-      `SELECT p.id, p.name, p.barcode, p.price, p.stock,
+      `SELECT p.id, p.name, p.barcode, p.price, p.stock, 
               p.image, p.description
        FROM products p
-       LEFT JOIN productos_proveedores pp ON p.id = pp.producto_id
-       WHERE pp.proveedor_id IS NULL
+       LEFT JOIN productos_proveedores pp 
+         ON p.id = pp.producto_id
+       WHERE pp.producto_id IS NULL
        ORDER BY p.name ASC`
     );
 
@@ -158,7 +159,7 @@ export async function listProductosSinProveedor(req, res) {
       price: r.price,
       stock: r.stock,
       description: r.description,
-      image_url: ensureDataUri(r.image),
+      image_url: r.image ? r.image : null,
     }));
 
     res.json(items);
@@ -167,6 +168,7 @@ export async function listProductosSinProveedor(req, res) {
     res.status(500).json({ error: "Server error" });
   }
 }
+
 
 
 
