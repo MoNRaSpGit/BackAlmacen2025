@@ -5,6 +5,7 @@ import {
   listProductosDeProveedor,
   updateProductoDeProveedor,
   listProductosSinProveedor ,
+  listTodosProductos,
 } from "../controllers/proveedores.js";
 
 const router = Router();
@@ -22,6 +23,8 @@ router.get("/:id/productos", listProductosDeProveedor);
 router.put("/:proveedorId/productos/:productoId", updateProductoDeProveedor);
 
 router.get("/productos/sin-proveedor", listProductosSinProveedor);
+
+router.get("/todos/productos", listTodosProductos);
                                     
 
 export default router;
