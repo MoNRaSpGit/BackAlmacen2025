@@ -170,6 +170,7 @@ export async function listProductosSinProveedor(req, res) {
 }
 
 // GET /api/proveedores/todos/productos
+// GET /api/proveedores/todos/productos
 export async function listTodosProductos(req, res) {
   try {
     const [rows] = await pool.query(
@@ -179,6 +180,8 @@ export async function listTodosProductos(req, res) {
        FROM products p
        LEFT JOIN productos_proveedores pp ON p.id = pp.producto_id
        LEFT JOIN proveedores pr ON pr.id = pp.proveedor_id
+       WHERE p.barcode IS NOT NULL AND p.barcode <> ''
+       GROUP BY p.id
        ORDER BY pr.nombre ASC, p.name ASC`
     );
 
@@ -200,9 +203,3 @@ export async function listTodosProductos(req, res) {
     res.status(500).json({ error: "Server error" });
   }
 }
-
-
-
-
-
-
