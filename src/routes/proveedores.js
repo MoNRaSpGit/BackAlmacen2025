@@ -3,17 +3,21 @@ import {
   listProveedores,
   asignarProveedor,
   listProductosDeProveedor,
+  updateProductoDeProveedor,
 } from "../controllers/proveedores.js";
 
 const router = Router();
 
-// GET /api/proveedores → lista todos los proveedores
+// ✅ listar todos los proveedores
 router.get("/", listProveedores);
 
-// POST /api/proveedores/asignar → asigna productos a proveedor
-router.post("/asignar", asignarProveedor);
+// ✅ asignar productos a un proveedor
+router.post("/productos/asignar", asignarProveedor);
 
-// GET /api/proveedores/:id/productos → lista productos de un proveedor
+// ✅ productos de un proveedor
 router.get("/:id/productos", listProductosDeProveedor);
+
+// ✅ actualizar producto de un proveedor
+router.put("/:proveedorId/productos/:productoId", updateProductoDeProveedor);
 
 export default router;
