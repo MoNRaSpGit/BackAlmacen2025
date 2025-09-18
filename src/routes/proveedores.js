@@ -20,4 +20,7 @@ router.get("/:id/productos", listProductosDeProveedor);
 // ✅ actualizar producto de un proveedor
 router.put("/:proveedorId/productos/:productoId", updateProductoDeProveedor);
 
+router.get("/proveedores/otros/productos", listProductosSinProveedor);
+
+
 export default router;

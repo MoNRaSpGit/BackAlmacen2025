@@ -138,4 +138,35 @@ export async function updateProductoDeProveedor(req, res) {
   }
 }
 
+// GET /api/proveedores/otros/productos
+export async function listProductosSinProveedor(req, res) {
+  try {
+    const [rows] = await pool.query(
+      `SELECT p.id, p.name, p.barcode, p.price, p.stock, 
+              p.image, p.description
+       FROM products p
+       LEFT JOIN productos_proveedores pp 
+         ON p.id = pp.producto_id
+       WHERE pp.proveedor_id IS NULL
+       ORDER BY p.name ASC`
+    );
+
+    const items = rows.map(r => ({
+      id: r.id,
+      name: r.name,
+      barcode: r.barcode,
+      price: r.price,
+      stock: r.stock,
+      description: r.description,
+      image_url: ensureDataUri(r.image),
+    }));
+
+    res.json(items);
+  } catch (err) {
+    console.error("listProductosSinProveedor error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+}
+
+
 
