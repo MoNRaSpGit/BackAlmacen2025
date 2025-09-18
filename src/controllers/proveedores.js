@@ -82,6 +82,8 @@ export async function listProductosDeProveedor(req, res) {
   }
 }
 
+import { pool } from "../config/db.js";
+
 // PUT /api/proveedores/:proveedorId/productos/:productoId
 export async function updateProductoDeProveedor(req, res) {
   try {
@@ -92,9 +94,9 @@ export async function updateProductoDeProveedor(req, res) {
       return res.status(400).json({ error: "IDs inválidos" });
     }
 
-    const { price, imageDataUrl } = req.body || {};
+    const { price } = req.body || {};
 
-    // 🔹 Actualizar precio si viene
+    // 🔹 Solo actualizamos precio
     if (price !== undefined) {
       const n = Number(price);
       if (!isFinite(n) || n < 0) {
@@ -103,29 +105,7 @@ export async function updateProductoDeProveedor(req, res) {
       await pool.query(`UPDATE products SET price = ? WHERE id = ?`, [n, productoId]);
     }
 
-    // 🔹 Manejo de imagen
-    if (imageDataUrl !== undefined) {
-      if (imageDataUrl === null || imageDataUrl === "") {
-        // Caso 3 → eliminar imagen
-        await pool.query(`UPDATE products SET image = NULL WHERE id = ?`, [productoId]);
-      } else {
-        // Caso 2 → validar y guardar nueva imagen
-        if (
-          !imageDataUrl.startsWith("data:") ||
-          !imageDataUrl.includes(";base64,")
-        ) {
-          return res.status(400).json({
-            error: "imageDataUrl debe ser data URI base64 (data:image/...;base64,...)",
-          });
-        }
-        if (imageDataUrl.length > 10_000_000) {
-          return res.status(413).json({ error: "imagen demasiado grande (>10MB)" });
-        }
-        await pool.query(`UPDATE products SET image = ? WHERE id = ?`, [imageDataUrl, productoId]);
-      }
-    }
-    
-    // 🔹 Devolver producto actualizado
+    // 🔹 Devolvemos el producto actualizado
     const [rows] = await pool.query(
       `SELECT p.id, p.name, p.barcode, p.price, p.stock, 
               p.image, p.description, pp.costo
@@ -136,7 +116,9 @@ export async function updateProductoDeProveedor(req, res) {
       [proveedorId, productoId]
     );
 
-    if (!rows.length) return res.status(404).json({ error: "Producto no encontrado" });
+    if (!rows.length) {
+      return res.status(404).json({ error: "Producto no encontrado" });
+    }
 
     const r = rows[0];
     res.json({
@@ -147,6 +129,7 @@ export async function updateProductoDeProveedor(req, res) {
       stock: r.stock,
       description: r.description,
       costo: r.costo,
+      // 👇 la imagen siempre se conserva
       image_url: r.image ? r.image : null,
     });
   } catch (err) {
@@ -154,4 +137,5 @@ export async function updateProductoDeProveedor(req, res) {
     res.status(500).json({ error: "Server error" });
   }
 }
+
 
